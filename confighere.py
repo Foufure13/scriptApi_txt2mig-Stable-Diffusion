@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import subprocess
 import tkinter as tk
 from tkinter import messagebox
 import ttkbootstrap as ttk
@@ -63,7 +64,7 @@ def check_webservice_and_run_script(sd_path, url):
     script_path = os.path.join(sd_path, 'webui-user.bat')
     if os.path.isfile(script_path):
         print("Exécution du script webui-user.bat...")
-        # subprocess.Popen([script_path], cwd=sd_path, shell=True)
+        subprocess.Popen([script_path], cwd=sd_path, shell=True)
     else:
         print("Le script webui-user.bat n'a pas été trouvé dans le chemin donné.")
         return False

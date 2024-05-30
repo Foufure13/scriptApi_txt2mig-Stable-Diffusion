@@ -1,0 +1,11 @@
+{
+    "match": true,
+    "matched_images": [
+        "gallery\\2024-05-28_17-24-01_0_face_gray.png",
+        "gallery\\2024-05-28_17-25-04_0_face_gray.png"
+    ],
+    "matched_images_paths": [
+        "C:\\Users\\Flo\\Documents\\GitHub\\Controler_Generator_Prompt\\FaceReco\\gallery\\2024-05-28_17-24-01_0_face_gray.png",
+        "C:\\Users\\Flo\\Documents\\GitHub\\Controler_Generator_Prompt\\FaceReco\\gallery\\2024-05-28_17-25-04_0_face_gray.png"
+    ]
+}

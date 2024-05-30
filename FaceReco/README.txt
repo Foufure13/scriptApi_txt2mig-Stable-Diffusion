@@ -1,0 +1,1 @@
+python eigenfaces3.py --gallery ./gallery/ --image a_tester/zach1.png
