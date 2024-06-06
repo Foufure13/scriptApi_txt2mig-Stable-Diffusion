@@ -28,40 +28,186 @@ if stable_diffusion_path:
 #--------------------------CONFIGURATION --------------------------
 # -----------------------------------------------------------------
 
-def send_command_faceCapture(dir, output_dir=""):
-    command_capture = ["python", "capture.py", "-dir", dir]
-    if output_dir:
-        command_capture += ["-output", output_dir]
-
-    os.chdir("face-capture")
-    subprocess.Popen(command_capture)
-    os.chdir("..")
-
-    print("Command sent --> " + " ".join(command_capture))
+def display_photos(photo_frame, display_folder):
+    # Supprimer les anciennes photos affichées
+    for widget in photo_frame.winfo_children():
+        widget.destroy()
 
 
-def send_command_faceRecognition(dir, output_dir=""):
-    command_capture = ["python", "FaceReco/eigenfaces3.py", "-gallery", dir]
-    if output_dir:
-        command_capture += ["-output", output_dir]
 
-    os.chdir("face-capture")
-    subprocess.Popen(command_capture)
-    os.chdir("..")
+    if (display_folder == "dir_face_recognition"):
+        print("display_folder == -dir_face_recognition- start ")
 
-    print("Command sent --> " + " ".join(command_capture))
+        correct_paths_in_json("FaceReco/result.json")
+        images_folder = "dir_stable_images"
 
-def on_slider_change(event):
-    # Placeholder function for slider change
-    print("Slider value:", event)
+            # Lire le fichier JSON
+        with open("FaceReco/result.json", 'r') as file:
+            data = json.load(file)
 
-def on_dropdown_change(event):
-    # Placeholder function for dropdown change
-    print("Dropdown value:", event)
+        # Créer une frame pour contenir le Canvas et la scrollbar
+        container = ttk.Frame(photo_frame)
+        container.pack(fill="both", expand=True)
 
-# -----------------------------------------------------------------
-#---------------------------- WINDOWS -----------------------------
-# -----------------------------------------------------------------
+        # Créer un Canvas
+        canvas = tk.Canvas(container)
+        canvas.pack(side="left", fill="both", expand=True)
+
+        # Ajouter une scrollbar verticale au Canvas
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
+
+        # Configurer le Canvas pour utiliser la scrollbar
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Créer une frame à l'intérieur du Canvas pour contenir les images
+        scrollable_frame = ttk.Frame(canvas)
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+
+        row_index = 0  # Pour positionner les images en ligne
+            
+        for key, value in data.items():
+            # Frame pour chaque ligne d'images
+            line_frame = tk.Frame(container)
+            line_frame.pack(fill="x", padx=5, pady=5)
+
+            # Afficher la photo de référence en plus grande taille
+            ref_image_path = os.path.join(images_folder, key)
+            if os.path.exists(ref_image_path):
+                ref_image = Image.open(ref_image_path)
+                ref_image = ref_image.resize((200, 200))  # Taille de l'image de référence
+                ref_photo = ImageTk.PhotoImage(ref_image)
+                ref_photo_label = tk.Label(line_frame, image=ref_photo)
+                ref_photo_label.image = ref_photo
+                ref_photo_label.pack(side="left", padx=5, pady=5)
+            
+            # Afficher les matched_images à droite en taille normale
+            for matched_image in value['matched_images']:
+                matched_image_path = os.path.join(images_folder, matched_image)
+                if os.path.exists(matched_image_path):
+                    img = Image.open(matched_image_path)
+                    img = img.resize((100, 100))  # Taille des images correspondantes
+                    photo = ImageTk.PhotoImage(img)
+                    photo_label = tk.Label(line_frame, image=photo)
+                    photo_label.image = photo
+                    photo_label.pack(side="left", padx=5, pady=5)
+                    
+        return
+
+
+
+
+
+    # Créer les frames pour la grande image et les petites images
+    container = tk.Frame(photo_frame)
+    container.pack(fill="both", expand=True)
+
+     # Frame pour la grande image
+    large_image_frame = tk.Frame(container)
+    if (display_folder == "dir_stable_images"):
+        large_image_frame.grid(row=0, column=0, rowspan=2, padx=10, pady=10, sticky="nw")
+
+    # Frame pour les petites images avec scrollbar
+    small_images_frame = tk.Frame(container)
+    small_images_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nw")
+
+    canvas = tk.Canvas(small_images_frame, width=420, height=410)
+    scrollbar = ttk.Scrollbar(small_images_frame, orient="vertical", command=canvas.yview)
+    scroll_frame = ttk.Frame(canvas)
+
+    scroll_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(
+            scrollregion=canvas.bbox("all")
+        )
+    )
+
+    canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    # Positionner le canvas et la scrollbar
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    # Récupérer la liste des fichiers dans le dossier à afficher
+    files = os.listdir(display_folder)
+    files.sort()
+    if(display_folder != "dir_face_capture"):
+        # Afficher la dernière photo créée en plus gros
+        if files:
+            last_photo = files[-1]
+            image = Image.open(os.path.join(display_folder, last_photo))
+            image = image.resize((400, 400))  # Redimensionner l'image
+            photo = ImageTk.PhotoImage(image)
+            photo_label = tk.Label(large_image_frame, image=photo)
+            photo_label.image = photo
+            photo_label.grid(row=0, column=0, padx=10, pady=10)  # Afficher la grande image à gauche
+
+            # Ajouter le bouton croix pour supprimer la photo dans le coin haut droit
+            delete_button = tk.Button(large_image_frame, text="X", command=lambda: delete_photo(last_photo, photo_frame, display_folder))
+            delete_button.grid(row=0, column=0, sticky="NE", padx=5, pady=5)
+
+    # Afficher les quatre dernières petites photos
+    countfile = 0
+    for i, file in enumerate(reversed(files[:-1])):
+        image = Image.open(os.path.join(display_folder, file))
+        image = image.resize((200, 200))  # Redimensionner l'image
+        photo = ImageTk.PhotoImage(image)
+        photo_label = tk.Label(scroll_frame, image=photo)
+        photo_label.image = photo
+                
+        # Calculer la position en grille pour les petites photos
+        row = countfile // 2
+        column = countfile % 2  # Ajuster pour qu'elles soient à droite de la grande photo
+        photo_label.grid(row=row, column=column, padx=5, pady=5)
+       
+
+        # Ajouter le bouton croix pour supprimer la photo dans le coin haut droit
+        delete_button = tk.Button(scroll_frame, text="X", command=lambda file=file: delete_photo(file, photo_frame, display_folder), bg="red")
+        delete_button.grid(row=row, column=column, sticky="NE", padx=5, pady=5)
+
+        countfile += 1
+
+def delete_photo(file, photo_frame, folder):
+    # Supprimer le fichier de la photo
+    file_path = os.path.join(folder, file)
+    os.remove(file_path)
+
+    # Mettre à jour l'affichage des photos
+    display_photos(photo_frame, folder)
+
+def update_photos():
+    global last_files
+    display_folder = get_current_output_folder()
+    current_files = set(os.listdir(display_folder))
+
+    # Réinitialiser la vue pour afficher les nouvelles images
+    if current_files != last_files:
+        last_files = current_files
+        display_photos(photo_frame, display_folder)
+        
+    root.after(10000, update_photos)
+
+def get_current_output_folder():
+    # Déterminer le dossier à afficher en fonction de l'onglet actif
+    selected_tab = notebook.index(notebook.select())
+    print("selected_tab --> " + str(selected_tab))
+    if selected_tab == 0:
+        return "dir_stable_images"
+    elif selected_tab == 1:
+        return "dir_face_capture"
+    elif selected_tab == 2:
+        return "dir_face_recognition"
+    else:
+        return "dir_stable_images"  # Valeur par défaut
+
+def on_tab_change(event):
+    update_photos()
 
 # Création de la fenêtre principale
 root = ttk.Window(themename="superhero")
@@ -71,237 +217,10 @@ root.title("Stable Diffusion Controller")
 notebook = ttk.Notebook(root)
 notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-
-#  Stable Prompt
-#  #############################################################
-#  #############################################################
-#  #############################################################
-
-# Fonction pour créer une page avec les widgets
-def create_page_stablePrompt(parent):
-    frame_gray = tk.Frame(parent)
-    frame_gray.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-    frame_green = tk.Frame(frame_gray)
-    frame_green.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10), expand=False, ipadx=20)
-
-    frame_orange = tk.Frame(frame_gray)
-    frame_orange.pack(side=tk.RIGHT, fill=tk.BOTH, expand=False, pady=(0, 0))
-
-    # Zone de Prompt
-    frame_part1 = tk.Frame(frame_gray)
-    frame_part1.pack(fill=tk.X, pady=(10, 0))
-
-    label_Prompts = tk.Label(frame_part1, text="Prompts")
-    label_Prompts.pack(side=tk.TOP, anchor='w', padx=(10))  # Aligne le titre à gauche
-
-    entry_Prompts = tk.Text(frame_part1, width=50, height=5)
-    entry_Prompts.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=5)
-
-    frame_part2 = tk.Frame(frame_gray)
-    frame_part2.pack(fill=tk.X, pady=(10, 0))
-
-    label_NegPrompts = tk.Label(frame_part2, text="Negative Prompts")
-    label_NegPrompts.pack(side=tk.TOP, anchor='w', padx=(10))  # Aligne le titre à gauche
-
-    entry_NegPrompts = tk.Text(frame_part2, width=50, height=5)
-    entry_NegPrompts.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=5)
-    entry_NegPrompts.bind("<KeyRelease>", lambda event: print("Negative Prompts : " + entry_NegPrompts.get("1.0", tk.END)))
-
-    # Ajout de la liste déroulante
-    label_Sampmethod = tk.Label(frame_green, text="Sampling method")
-    label_Sampmethod.pack(pady=(10, 0))
-    options = ['DPM++ 2M Karras', 'DPM++ SDE Karras', 'DPM++ 2M SDE Exponential', 'DPM++ 2M SDE Karras', 'Euler a', 'Euler', 'LMS', 'Heun', 'DPM2', 'DPM2 a', 'DPM++ 2S a', 'DPM++ 2M', 'DPM++ SDE', 'DPM++ 2M SDE', 'DPM++ 2M SDE Heun', 'DPM++ 2M SDE Heun Karras', 'DPM++ 2M SDE Heun Exponential', 'DPM++ 3M SDE', 'DPM++ 3M SDE Karras', 'DPM++ 3M SDE Exponential', 'DPM fast', 'DPM adaptive', 'LMS Karras', 'DPM2 Karras', 'DPM2 a Karras', 'DPM2 a Karras', 'DPM++ 2S a Karras', 'Restart', 'DDIM', 'PLMS', 'UniPC',]
-
-    dropdown = ttk.Combobox(frame_green, values=options, width=30)
-    dropdown.set("DPM++ 2M Karras")  # Set the default option
-    dropdown.pack(padx=10, pady=5)
-    dropdown.bind("<<ComboboxSelected>>", lambda event: on_dropdown_change(dropdown.get()))
-
-    # Ajout des sliders
-    label_width = tk.Label(frame_green, text="Width : 720")
-    label_width.pack()
-    sliderw = ttk.Scale(frame_green, from_=64, to=2400, length=150, command=lambda value: label_width.config(text="Width : " + str(round(float(value)))))
-    sliderw.pack(padx=10, pady=5)
-    sliderw.set(720)
-    sliderw.bind("<ButtonRelease-1>", lambda event: on_slider_change(sliderw.get()))
-
-    label_height = tk.Label(frame_green, text="Height : 720")
-    label_height.pack()
-    sliderh = ttk.Scale(frame_green, from_=64, to=2400, length=150, command=lambda value: label_height.config(text="Height : " + str(round(float(value)))))
-    sliderh.pack(padx=10, pady=5)
-    sliderh.set(720)
-    sliderh.bind("<ButtonRelease-1>", lambda event: on_slider_change(sliderh.get()))
-
-    label_steps = tk.Label(frame_green, text="Sampling steps : 20")
-    label_steps.pack()
-    slider0 = ttk.Scale(frame_green, from_=1, to=150, length=150, command=lambda value: label_steps.config(text="Sampling steps : " + str(round(float(value)))))
-    slider0.pack(padx=10, pady=5)
-    slider0.set(20)
-    slider0.bind("<ButtonRelease-1>", lambda event: on_slider_change(slider0.get()))
-
-    label_batchcount = tk.Label(frame_green, text="Batch count : 1")
-    label_batchcount.pack(pady=(10, 0))
-    slider1 = ttk.Scale(frame_green, from_=1, to=100, length=150, command=lambda value: label_batchcount.config(text="Batch count : " + str(round(float(value)))))
-    slider1.pack(padx=10, pady=5)
-    slider1.set(1)
-    slider1.bind("<ButtonRelease-1>", lambda event: on_slider_change(slider1.get()))
-
-    label_batchsize = tk.Label(frame_green, text="Batch size : 1")
-    label_batchsize.pack(pady=(10, 0))
-    slider2 = ttk.Scale(frame_green, bootstyle="danger", from_=1, to=8, length=150, command=lambda value: label_batchsize.config(text="Batch size : " + str(round(float(value)))))
-    slider2.pack(padx=10, pady=5)
-    slider2.set(1)
-    slider2.bind("<ButtonRelease-1>", lambda event: on_slider_change(slider2.get()))
-
-    label_cfg = tk.Label(frame_green, text="CFG Scale : 4")
-    label_cfg.pack(pady=(10, 0))
-    slider3 = ttk.Scale(frame_green, from_=1, to=30, length=150, command=lambda value: label_cfg.config(text="CFG Scale : " + str(round(float(value)))))
-    slider3.pack(padx=10, pady=5)
-    slider3.set(4)
-    slider3.bind("<ButtonRelease-1>", lambda event: on_slider_change(slider3.get()))
-
-    label_seed = tk.Label(frame_green, text="Seed")
-    label_seed.pack(padx=(10), pady=(10, 0))  # Aligne le titre à gauche
-    entry_seed = tk.Text(frame_green, width=10, height=1)
-    entry_seed.pack(fill=tk.BOTH, padx=15, pady=5)
-    entry_seed.insert(tk.END, "-1")
-    entry_seed.tag_configure("center", justify="center")
-    entry_seed.tag_add("center", "1.0", "end")
-
-    # Ajout du bouton SEND
-    button_send = tk.Button(frame_gray, text="Send Prompt", command=lambda: send_command_stablePrompt(create_arg(entry_Prompts.get("1.0", tk.END), entry_NegPrompts.get("1.0", tk.END), round(slider0.get()), round(slider1.get()), round(slider2.get()), round(slider3.get()), round(sliderw.get()), round(sliderh.get()), dropdown.get(), entry_seed.get("1.0", tk.END))))
-    button_send.pack(padx=10, pady=(45, 15), fill=tk.BOTH, expand=True)
-    button_send.configure(height=1, width=15, bd=0, cursor="hand2")
-    button_send.place(relx=0.5, rely=1, anchor=tk.S, width=200, height=50)
-
-
-#  Face Capture
-#  #############################################################
-#  #############################################################
-#  #############################################################
-
-def create_page_faceCapture(parent):
-    frame_gray = tk.Frame(parent)
-    frame_gray.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-    frame_green = tk.Frame(frame_gray)
-    frame_green.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10), expand=False, ipadx=20)
-
-    frame_orange = tk.Frame(frame_gray)
-    frame_orange.pack(side=tk.RIGHT, fill=tk.BOTH, expand=False, pady=(0, 0))
-
-    # Zone de Prompt
-    frame_part1 = tk.Frame(frame_gray)
-    frame_part1.pack(fill=tk.X, pady=(10, 0))
-
-    # Section for input folder
-    def browse_folder():
-        folder_path = filedialog.askdirectory()
-        entry_folder.delete(0, tk.END)
-        entry_folder.insert(tk.END, folder_path)
-
-    label_folder = tk.Label(frame_part1, text="Images Folder Path to face capture")
-    label_folder.pack(side=tk.TOP, anchor='w', padx=(10, 0), pady=(5, 0))  # Align the label to the left
-
-    entry_folder = tk.Entry(frame_part1, width=50)
-    entry_folder.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=(10, 0), pady=(5, 0))
-
-    button_browse = tk.Button(frame_part1, text="Browse", command=browse_folder)
-    button_browse.pack(side=tk.TOP, anchor='w', padx=(10, 0), pady=(5, 10))
-
-
-    # Section for output folder
-    def browse_output_folder():
-        output_folder_path = filedialog.askdirectory()
-        entry_output_folder.delete(0, tk.END)
-        entry_output_folder.insert(tk.END, output_folder_path)
-
-    label_output_folder = tk.Label(frame_part1, text="Output Folder Path")
-    label_output_folder.pack(side=tk.TOP, anchor='w', padx=(10, 0), pady=(10, 0))  # Align the label to the left
-
-    entry_output_folder = tk.Entry(frame_part1, width=50)
-    entry_output_folder.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=(10, 0), pady=(5, 0))
-
-    button_browse_output = tk.Button(frame_part1, text="Browse", command=browse_output_folder)
-    button_browse_output.pack(side=tk.TOP, anchor='w', padx=(10, 0), pady=(5, 10))
-   
-
-    # Ajout de la liste déroulante
-    label_Sampmethod = tk.Label(frame_green, text="Sampling method")
-    label_Sampmethod.pack(pady=(10, 0))
-
-    # Ajout du bouton SEND
-    button_send = tk.Button(frame_gray, text="Send Prompt", command=lambda: send_command_faceCapture(entry_folder.get(),entry_output_folder.get()))
-    button_send.pack(padx=10, pady=(45, 15), fill=tk.BOTH, expand=True)
-    button_send.configure(height=1, width=15, bd=0, cursor="hand2")
-    button_send.place(relx=0.5, rely=1, anchor=tk.S, width=200, height=50)
-
-
-def create_page_faceRecognition(parent):
-    frame_gray = tk.Frame(parent)
-    frame_gray.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-    frame_green = tk.Frame(frame_gray)
-    frame_green.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10), expand=False, ipadx=20)
-
-    frame_orange = tk.Frame(frame_gray)
-    frame_orange.pack(side=tk.RIGHT, fill=tk.BOTH, expand=False, pady=(0, 0))
-
-    # Zone de Prompt
-    frame_part1 = tk.Frame(frame_gray)
-    frame_part1.pack(fill=tk.X, pady=(10, 0))
-
-    # Section for input folder
-    def browse_folder():
-        folder_path = filedialog.askdirectory()
-        entry_folder.delete(0, tk.END)
-        entry_folder.insert(tk.END, folder_path)
-
-    label_folder = tk.Label(frame_part1, text="Images Folder Path to Picture Recognition [Only Faces Grey Pictures]")
-    label_folder.pack(side=tk.TOP, anchor='w', padx=(10, 0), pady=(5, 0))  # Align the label to the left
-
-    entry_folder = tk.Entry(frame_part1, width=50)
-    entry_folder.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=(10, 0), pady=(5, 0))
-
-    button_browse = tk.Button(frame_part1, text="Browse", command=browse_folder)
-    button_browse.pack(side=tk.TOP, anchor='w', padx=(10, 0), pady=(5, 10))
-
-
-    # Section for output folder
-    def browse_output_folder():
-        output_folder_path = filedialog.askdirectory()
-        entry_output_folder.delete(0, tk.END)
-        entry_output_folder.insert(tk.END, output_folder_path)
-
-    label_output_folder = tk.Label(frame_part1, text="Output Folder Path")
-    label_output_folder.pack(side=tk.TOP, anchor='w', padx=(10, 0), pady=(10, 0))  # Align the label to the left
-
-    entry_output_folder = tk.Entry(frame_part1, width=50)
-    entry_output_folder.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=(10, 0), pady=(5, 0))
-
-    button_browse_output = tk.Button(frame_part1, text="Browse", command=browse_output_folder)
-    button_browse_output.pack(side=tk.TOP, anchor='w', padx=(10, 0), pady=(5, 10))
-   
-
-    # Ajout de la liste déroulante
-    label_Sampmethod = tk.Label(frame_green, text="Sampling method")
-    label_Sampmethod.pack(pady=(10, 0))
-
-    # Ajout du bouton SEND
-    button_send = tk.Button(frame_gray, text="Send Prompt", command=lambda: send_command_faceCapture(entry_folder.get(),entry_output_folder.get()))
-    button_send.pack(padx=10, pady=(45, 15), fill=tk.BOTH, expand=True)
-    button_send.configure(height=1, width=15, bd=0, cursor="hand2")
-    button_send.place(relx=0.5, rely=1, anchor=tk.S, width=200, height=50)
-
-
-
-
-# Créer les deux pages
+# Créer les trois pages
 page1 = ttk.Frame(notebook)
 page2 = ttk.Frame(notebook)
 page3 = ttk.Frame(notebook)
-
 
 create_page_stablePrompt(page1)
 create_page_faceCapture(page2)
@@ -311,6 +230,9 @@ notebook.add(page1, text="Stable Prompt")
 notebook.add(page2, text="Face Capture")
 notebook.add(page3, text="Face Recognition")
 
+# Ajouter un événement pour détecter le changement d'onglet
+notebook.bind("<<NotebookTabChanged>>", on_tab_change)
+
 # -----------------------------------------------------------------
 #---------------------------- RESULT ------------------------------
 # -----------------------------------------------------------------
@@ -318,32 +240,17 @@ notebook.add(page3, text="Face Recognition")
 frame_blue = tk.Frame(root)
 frame_blue.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-# label_blue = tk.Label(frame_blue, text="Résultat")
-# label_blue.pack(pady=(10, 0))
-
 # Ajouter la zone d'affichage des photos
 photo_frame = tk.Frame(frame_blue)
 photo_frame.pack(padx=10, pady=5)
 
-# Appeler la fonction pour afficher les photos
-def update_photos():
-    global last_files
-    output_folder = "dir_stable_images"
-    current_files = set(os.listdir(output_folder))
-    
-    if current_files != last_files:
-        last_files = current_files
-        display_photos(photo_frame)
-        
-    root.after(10000, update_photos)
-
-display_photos(photo_frame)
+# Initialiser last_files avec les fichiers du dossier par défaut
 last_files = set(os.listdir("dir_stable_images"))
+display_photos(photo_frame, "dir_stable_images")
 update_photos()
 
-# -----------------------------------------------------------------
-#---------------------------- RESULT ------------------------------
-# -----------------------------------------------------------------
+# Démarrer la surveillance des nouveaux fichiers
+root.after(10000, update_photos)
 
 # Lancement de la boucle principale
 root.mainloop()
