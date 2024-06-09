@@ -12,8 +12,8 @@ url = 'http://127.0.0.1:7860/sdapi/v1/txt2img'
 
 parser = argparse.ArgumentParser(description='API txt2img script')
 parser.add_argument('--sampler_name', type=int, default='DPM++ 2M Karras', help='Sampler name')
-parser.add_argument('--prompt', type=str, default='A photography of cover photo dark-haired woman, cold colors , beautiful , 3D rendering , realistic,  ultra close up , Sketch drawing style , Backlight, long hair, green eyes, japanese clothes', help='Prompt')
-parser.add_argument('--NegativePrompt', type=str, default='cartoon,  illustration,  drawing,  painting,  digital art,  2D, CGI,  VFX', help='Negative prompt')
+parser.add_argument('--prompt', type=str, required=True, help='Prompt')
+parser.add_argument('--NegativePrompt', type=str, default='', help='Negative prompt')
 parser.add_argument('--steps', type=int, default=30, help='Number of steps')
 parser.add_argument('--batch_size', type=int, default=1, help='Batch size')
 parser.add_argument('--batch_count', type=int, default=1, help='Batch count')

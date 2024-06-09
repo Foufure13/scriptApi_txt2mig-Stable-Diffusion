@@ -4,8 +4,11 @@ from ttkbootstrap.constants import *
 import os
 import json
 import subprocess
+import io
+import datetime
 import requests
-from tkinter import messagebox
+import base64
+from tkinter import messagebox, filedialog
 from PIL import Image, ImageTk  # Import the Image module from the PIL package
 from ttkbootstrap.widgets import Meter
 
@@ -119,8 +122,10 @@ def create_page_stablePrompt(parent):
     label_Prompts = tk.Label(frame_part1, text="Prompts")
     label_Prompts.pack(side=tk.TOP, anchor='w', padx=(10))  # Aligne le titre à gauche
 
+
     entry_Prompts = tk.Text(frame_part1, width=50, height=5)
     entry_Prompts.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=5)
+    entry_Prompts.insert(tk.END, "A photography of cover photo dark-haired woman, cold colors , beautiful , 3D rendering , realistic,  ultra close up , Sketch drawing style , Backlight, long hair, green eyes, japanese clothes")
 
     frame_part2 = tk.Frame(frame_gray)
     frame_part2.pack(fill=tk.X, pady=(10, 0))
@@ -128,9 +133,11 @@ def create_page_stablePrompt(parent):
     label_NegPrompts = tk.Label(frame_part2, text="Negative Prompts")
     label_NegPrompts.pack(side=tk.TOP, anchor='w', padx=(10))  # Aligne le titre à gauche
 
+
     entry_NegPrompts = tk.Text(frame_part2, width=50, height=5)
     entry_NegPrompts.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=5)
     entry_NegPrompts.bind("<KeyRelease>", lambda event: print("Negative Prompts : " + entry_NegPrompts.get("1.0", tk.END)))
+    entry_NegPrompts.insert(tk.END, "cartoon,  illustration,  drawing,  painting,  digital art,  2D, CGI,  VFX")
 
     # Ajout de la liste déroulante
     label_Sampmethod = tk.Label(frame_green, text="Sampling method")
@@ -194,7 +201,25 @@ def create_page_stablePrompt(parent):
     entry_seed.tag_add("center", "1.0", "end")
 
     # Ajout du bouton SEND
-    button_send = tk.Button(frame_gray, text="Send Prompt", command=lambda: send_command_stablePrompt(create_arg(entry_Prompts.get("1.0", tk.END), entry_NegPrompts.get("1.0", tk.END), round(slider0.get()), round(slider1.get()), round(slider2.get()), round(slider3.get()), round(sliderw.get()), round(sliderh.get()), dropdown.get(), entry_seed.get("1.0", tk.END))))
+    def send_request():
+        prompt = entry_Prompts.get("1.0", tk.END)
+        negPrompt = entry_NegPrompts.get("1.0", tk.END)
+        steps = round(slider0.get())
+        batchcount = round(slider1.get())
+        batchsize = round(slider2.get())
+        cfg = round(slider3.get())
+        width = round(sliderw.get())
+        height = round(sliderh.get())
+        samplingMethod = dropdown.get()
+        seed = entry_seed.get("1.0", tk.END)
+        request_stable_diffusion(prompt, negPrompt, steps, batchcount, batchsize, cfg, width, height, samplingMethod, seed)
+
+
+
+
+    button_send = tk.Button(frame_gray, text="Send Prompt", command=lambda: send_request())
+
+    # button_send = tk.Button(frame_gray, text="Send Prompt", command=lambda: send_command_stablePrompt(create_arg(entry_Prompts.get("1.0", tk.END), entry_NegPrompts.get("1.0", tk.END), round(slider0.get()), round(slider1.get()), round(slider2.get()), round(slider3.get()), round(sliderw.get()), round(sliderh.get()), dropdown.get(), entry_seed.get("1.0", tk.END))))
     button_send.pack(padx=10, pady=(45, 15), fill=tk.BOTH, expand=True)
     button_send.configure(height=1, width=15, bd=0, cursor="hand2")
     button_send.place(relx=0.5, rely=1, anchor=tk.S, width=200, height=50)
@@ -230,6 +255,7 @@ def create_page_faceCapture(parent):
 
     entry_folder = tk.Entry(frame_part1, width=50)
     entry_folder.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=(10, 0), pady=(5, 0))
+    entry_folder.insert(tk.END, "../dir_stable_images")
 
     button_browse = tk.Button(frame_part1, text="Browse", command=browse_folder)
     button_browse.pack(side=tk.TOP, anchor='w', padx=(10, 0), pady=(5, 10))
@@ -246,6 +272,7 @@ def create_page_faceCapture(parent):
 
     entry_output_folder = tk.Entry(frame_part1, width=50)
     entry_output_folder.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=(10, 0), pady=(5, 0))
+    entry_output_folder.insert(tk.END, "../dir_face_capture")
 
     button_browse_output = tk.Button(frame_part1, text="Browse", command=browse_output_folder)
     button_browse_output.pack(side=tk.TOP, anchor='w', padx=(10, 0), pady=(5, 10))
@@ -256,7 +283,11 @@ def create_page_faceCapture(parent):
     label_Sampmethod.pack(pady=(10, 0))
 
     # Ajout du bouton SEND
-    button_send = tk.Button(frame_gray, text="Send Prompt", command=lambda: send_command_faceCapture(entry_folder.get(),entry_output_folder.get()))
+    def start_face_capture():
+        send_command_faceCapture(entry_folder.get(), entry_output_folder.get())
+
+
+    button_send = tk.Button(frame_gray, text="Send Prompt", command=lambda: start_face_capture())
     button_send.pack(padx=10, pady=(45, 15), fill=tk.BOTH, expand=True)
     button_send.configure(height=1, width=15, bd=0, cursor="hand2")
     button_send.place(relx=0.5, rely=1, anchor=tk.S, width=200, height=50)
@@ -287,6 +318,7 @@ def create_page_faceRecognition(parent):
 
     entry_folder = tk.Entry(frame_part1, width=50)
     entry_folder.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=(10, 0), pady=(5, 0))
+    entry_folder.insert(tk.END, "../dir_face_capture")
 
     button_browse = tk.Button(frame_part1, text="Browse", command=browse_folder)
     button_browse.pack(side=tk.TOP, anchor='w', padx=(10, 0), pady=(5, 10))
@@ -303,6 +335,7 @@ def create_page_faceRecognition(parent):
 
     entry_output_folder = tk.Entry(frame_part1, width=50)
     entry_output_folder.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=(10, 0), pady=(5, 0))
+    entry_output_folder.insert(tk.END, "../dir_face_recognition")
 
     button_browse_output = tk.Button(frame_part1, text="Browse", command=browse_output_folder)
     button_browse_output.pack(side=tk.TOP, anchor='w', padx=(10, 0), pady=(5, 10))
@@ -364,6 +397,218 @@ def correct_paths_in_json(file_path):
 
 
 
+def display_photos(container, display_folder):
+    # Supprimer les anciennes photos affichées
+    for widget in container.winfo_children():
+        widget.destroy()
 
 
 
+    if (display_folder == "dir_face_recognition"):
+        print("display_folder == -dir_face_recognition- start ")
+
+        pathjson = "FaceReco/result.json"
+        correct_paths_in_json(pathjson)
+        images_folder = "dir_stable_images"
+
+        display_json_images2(container, pathjson, images_folder)
+        return
+
+
+
+    # Créer les frames pour la grande image et les petites images
+    container2 = tk.Frame(container)
+    container2.pack(fill="both", expand=True)
+
+     # Frame pour la grande image
+    large_image_frame = tk.Frame(container2)
+    if (display_folder == "dir_stable_images"):
+        large_image_frame.grid(row=0, column=0, rowspan=2, padx=10, pady=10, sticky="nw")
+
+    # Frame pour les petites images avec scrollbar
+    small_images_frame = tk.Frame(container2)
+    small_images_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nw")
+
+    canvas = tk.Canvas(small_images_frame, width=420, height=410)
+    if (display_folder == "dir_face_capture"):
+        canvas.config(width=620, height=300)
+    scrollbar = ttk.Scrollbar(small_images_frame, orient="vertical", command=canvas.yview)
+    scroll_frame = ttk.Frame(canvas)
+
+    scroll_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(
+            scrollregion=canvas.bbox("all")
+        )
+    )
+
+    canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    # Positionner le canvas et la scrollbar
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    # Récupérer la liste des fichiers dans le dossier à afficher
+    files = os.listdir(display_folder)
+    files.sort()
+    if(display_folder != "dir_face_capture"):
+        # Afficher la dernière photo créée en plus gros
+        if files:
+            last_photo = files[-1]
+            image = Image.open(os.path.join(display_folder, last_photo))
+            image = image.resize((400, 400))  # Redimensionner l'image
+            photo = ImageTk.PhotoImage(image)
+            photo_label = tk.Label(large_image_frame, image=photo)
+            photo_label.image = photo
+            photo_label.grid(row=0, column=0, padx=10, pady=10)  # Afficher la grande image à gauche
+
+            # Ajouter le bouton croix pour supprimer la photo dans le coin haut droit
+            delete_button = tk.Button(large_image_frame, text="X", command=lambda: delete_photo(last_photo, container, display_folder))
+            delete_button.grid(row=0, column=0, sticky="NE", padx=5, pady=5)
+
+    # Afficher les quatre dernières petites photos
+    countfile = 0
+    for i, file in enumerate(reversed(files[:-1])):
+        image = Image.open(os.path.join(display_folder, file))
+        image = image.resize((200, 200))  # Redimensionner l'image
+        photo = ImageTk.PhotoImage(image)
+        photo_label = tk.Label(scroll_frame, image=photo)
+        photo_label.image = photo
+                
+        # Calculer la position en grille pour les petites photos
+        row = countfile // 2
+        column = countfile % 2  # Ajuster pour qu'elles soient à droite de la grande photo
+        photo_label.grid(row=row, column=column, padx=5, pady=5)
+        if (display_folder == "dir_face_capture"):
+            row = countfile // 3
+            column = countfile % 3
+            photo_label.grid(row=row, column=column, padx=5, pady=5)
+       
+
+        # Ajouter le bouton croix pour supprimer la photo dans le coin haut droit
+        delete_button = tk.Button(scroll_frame, text="X", command=lambda file=file: delete_photo(file, container, display_folder), bg="red")
+        delete_button.grid(row=row, column=column, sticky="NE", padx=5, pady=5)
+
+        countfile += 1
+
+
+def delete_photo(file, photo_frame, folder):
+    # Supprimer le fichier de la photo
+    file_path = os.path.join(folder, file)
+    os.remove(file_path)
+
+    # Mettre à jour l'affichage des photos
+    display_photos(photo_frame, folder)
+
+
+
+
+def display_json_images2(contenair, json_file, display_folder="dir_stable_images"):
+    with open(json_file, 'r') as file:
+        data = json.load(file)
+    
+    # Create a new frame to hold the images
+    image_box = tk.Frame(contenair)
+    image_box.pack(fill="both", expand=True)
+    
+    # Create a canvas and scrollbar to enable scrolling
+    canvas = tk.Canvas(image_box, width=620, height=410)
+    scroll_y = ttk.Scrollbar(image_box, orient="vertical", command=canvas.yview)
+    scroll_x = ttk.Scrollbar(image_box, orient="horizontal", command=canvas.xview)
+    scrollable_frame = tk.Frame(canvas)
+    
+    scrollable_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(
+            scrollregion=canvas.bbox("all")
+        )
+    )
+    
+    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+    canvas.configure(yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
+    
+    scroll_y.pack(side="right", fill="y")
+    scroll_x.pack(side="bottom", fill="x")
+    canvas.pack(side="left", fill="both", expand=True)
+    
+    chemin_actuel = os.getcwd()
+    print("Le chemin actuel est :", chemin_actuel)
+    # Load and display images
+    row = 0
+    for main_image_path, value in data.items():
+        ref_image_path = os.path.join(display_folder, main_image_path)
+        if(verifier_image(ref_image_path)):
+            img = Image.open(ref_image_path)
+            img = img.resize((80, 80), Image.ANTIALIAS)
+            img = ImageTk.PhotoImage(img)
+            
+            label = tk.Label(scrollable_frame, image=img)
+            label.image = img  # Keep a reference to avoid garbage collection
+            label.grid(row=row, column=0, padx=5, pady=5)
+            
+        # Load and display matched images
+        col = 1
+        for matched_image_path in value["matched_images"]:
+            mtd_image_path = os.path.join(display_folder, matched_image_path)
+            if(verifier_image(mtd_image_path)):
+                matched_img = Image.open(mtd_image_path)
+                matched_img = matched_img.resize((80, 80), Image.ANTIALIAS)
+                matched_img = ImageTk.PhotoImage(matched_img)
+                
+                matched_label = tk.Label(scrollable_frame, image=matched_img)
+                matched_label.image = matched_img  # Keep a reference to avoid garbage collection
+                matched_label.grid(row=row, column=col, padx=5, pady=5)
+            
+            col += 1
+        row += 1
+
+
+import os
+
+def verifier_image(path):
+    if os.path.isfile(path):
+        extension = os.path.splitext(path)[1]
+        if extension.lower() in ['.jpg', '.jpeg', '.png', '.gif']:
+            print("l'image est introuvable  :", path)
+            return True
+    return False
+
+
+
+def request_stable_diffusion(prompt, negative_prompt, steps, batch_count,  batch_size, scale_cfg, width, height, sampler_name, seed):
+    url = 'http://127.0.0.1:7860/sdapi/v1/txt2img'
+
+    payload = {
+        "sampler_index": sampler_name,
+        "prompt": prompt,
+        "negativeprompt": negative_prompt,
+        "steps": steps,
+        "batch_size": batch_size,
+        "batch_count": batch_count,
+        "cfg_scale": scale_cfg,
+        "seed": seed,
+        "width": width,
+        "height": height
+    }
+
+
+    current_time = datetime.datetime.now()
+    datecurrent = current_time.strftime("%Y-%m-%d_%H-%M-%S")
+    # print(datecurrent)
+    x = requests.post(url, json=payload)
+    if "error" in x.text:
+        print(x.text)
+
+    output_dir = "dir_stable_images"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    r = x.json()
+    for i in enumerate(r["images"]):
+        img_name = os.path.join(output_dir, f"{datecurrent}_{i[0]}.png")
+        img = i[1].split(",",1)[0]
+        image = Image.open(io.BytesIO(base64.b64decode(img)))
+        image.save(img_name)
+
+    print("Done!")

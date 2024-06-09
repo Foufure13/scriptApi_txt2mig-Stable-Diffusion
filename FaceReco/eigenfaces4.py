@@ -49,7 +49,7 @@ def move_to_test_folder(image_file, test_folder):
         os.makedirs(test_folder)
     shutil.move(image_file, os.path.join(test_folder, os.path.basename(image_file)))
 
-def main(gallery_folder):
+def main(gallery_folder, output_folder):
     if not os.path.exists(os.path.join(gallery_folder, "a_tester")):
         os.makedirs(os.path.join(gallery_folder, "a_tester"))
     seuil = 8
@@ -136,11 +136,13 @@ def main(gallery_folder):
             # shutil.move(image_to_find, os.path.join(gallery_folder, image_file))
 
     # Enregistrer les résultats dans un fichier JSON à la fin du script
-    with open("result.json", "w") as f:
+    
+    with open(os.path.join(output_folder, "result.json"), "w") as f:
         json.dump(results_dict, f, indent=4)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Face Recognition using Eigenfaces")
     parser.add_argument('--gallery', type=str, required=True, help="Path to the gallery folder containing reference images.")
+    parser.add_argument('-output', type=str, required=False, help="output json", default="")
     args = parser.parse_args()
-    main(args.gallery)
+    main(args.gallery, args.output)
