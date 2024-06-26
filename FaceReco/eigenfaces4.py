@@ -52,7 +52,11 @@ def move_to_test_folder(image_file, test_folder):
 def main(gallery_folder, output_folder):
     if not os.path.exists(os.path.join(gallery_folder, "a_tester")):
         os.makedirs(os.path.join(gallery_folder, "a_tester"))
-    seuil = 8
+
+    if os.path.exists(os.path.join(output_folder, "result.json")):
+        os.remove(os.path.join(output_folder, "result.json"))
+
+    seuil = 7
     threshold = seuil*1000  
 
     # Create necessary directories if they don't exist
@@ -136,7 +140,9 @@ def main(gallery_folder, output_folder):
             # shutil.move(image_to_find, os.path.join(gallery_folder, image_file))
 
     # Enregistrer les résultats dans un fichier JSON à la fin du script
-    
+    # # Supprimer le fichier result.json du dossier output_folder
+
+
     with open(os.path.join(output_folder, "result.json"), "w") as f:
         json.dump(results_dict, f, indent=4)
 

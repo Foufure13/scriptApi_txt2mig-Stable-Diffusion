@@ -350,7 +350,7 @@ def create_page_faceRecognition(parent):
 
     # Afficher le contenu du fichier JSON
     def get_json_content():
-        with open("FaceReco/result.json") as f:
+        with open("dir_face_recognition/result.json") as f:
             data = json.load(f)
             json_content = json.dumps(data, indent=4)
             return json_content
@@ -385,7 +385,7 @@ def correct_paths_in_json(file_path):
         new_key = key.replace('_face_gray', '')
         
         # Corriger les matched_images
-        new_matched_images = [img.replace('gallery\\', '').replace('_face_gray', '') for img in value['matched_images']]
+        new_matched_images = [img.replace('gallery\\', '').replace('_face_gray', '').replace('../dir_face_capture\\', '') for img in value['matched_images']]
         
         corrected_data[new_key] = {'matched_images': new_matched_images}
     
@@ -407,7 +407,7 @@ def display_photos(container, display_folder):
     if (display_folder == "dir_face_recognition"):
         print("display_folder == -dir_face_recognition- start ")
 
-        pathjson = "FaceReco/result.json"
+        pathjson = "dir_face_recognition/result.json"
         correct_paths_in_json(pathjson)
         images_folder = "dir_stable_images"
 
@@ -464,7 +464,7 @@ def display_photos(container, display_folder):
             photo_label.grid(row=0, column=0, padx=10, pady=10)  # Afficher la grande image à gauche
 
             # Ajouter le bouton croix pour supprimer la photo dans le coin haut droit
-            delete_button = tk.Button(large_image_frame, text="X", command=lambda: delete_photo(last_photo, container, display_folder))
+            delete_button = tk.Button(large_image_frame, text="X", command=lambda: delete_photo(last_photo, display_folder))
             delete_button.grid(row=0, column=0, sticky="NE", padx=5, pady=5)
 
     # Afficher les quatre dernières petites photos
@@ -487,19 +487,18 @@ def display_photos(container, display_folder):
        
 
         # Ajouter le bouton croix pour supprimer la photo dans le coin haut droit
-        delete_button = tk.Button(scroll_frame, text="X", command=lambda file=file: delete_photo(file, container, display_folder), bg="red")
+        delete_button = tk.Button(scroll_frame, text="X", command=lambda file=file: delete_photo(file, display_folder), bg="red")
         delete_button.grid(row=row, column=column, sticky="NE", padx=5, pady=5)
 
         countfile += 1
 
 
-def delete_photo(file, photo_frame, folder):
+def delete_photo(file, folder):
     # Supprimer le fichier de la photo
     file_path = os.path.join(folder, file)
-    os.remove(file_path)
-
-    # Mettre à jour l'affichage des photos
-    display_photos(photo_frame, folder)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        print("del picture   :", file_path)
 
 
 
@@ -513,7 +512,7 @@ def display_json_images2(contenair, json_file, display_folder="dir_stable_images
     image_box.pack(fill="both", expand=True)
     
     # Create a canvas and scrollbar to enable scrolling
-    canvas = tk.Canvas(image_box, width=620, height=410)
+    canvas = tk.Canvas(image_box, width=1020, height=460)
     scroll_y = ttk.Scrollbar(image_box, orient="vertical", command=canvas.yview)
     scroll_x = ttk.Scrollbar(image_box, orient="horizontal", command=canvas.xview)
     scrollable_frame = tk.Frame(canvas)
@@ -527,6 +526,7 @@ def display_json_images2(contenair, json_file, display_folder="dir_stable_images
     
     canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
     canvas.configure(yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
+    canvas.config(width=1520, height=350)
     
     scroll_y.pack(side="right", fill="y")
     scroll_x.pack(side="bottom", fill="x")
@@ -540,27 +540,33 @@ def display_json_images2(contenair, json_file, display_folder="dir_stable_images
         ref_image_path = os.path.join(display_folder, main_image_path)
         if(verifier_image(ref_image_path)):
             img = Image.open(ref_image_path)
-            img = img.resize((80, 80), Image.ANTIALIAS)
+            img = img.resize((120, 120), Image.ANTIALIAS)
             img = ImageTk.PhotoImage(img)
             
             label = tk.Label(scrollable_frame, image=img)
             label.image = img  # Keep a reference to avoid garbage collection
             label.grid(row=row, column=0, padx=5, pady=5)
+
+            # delete_button = tk.Button(scrollable_frame, text="X", command=lambda file=file: delete_photo(ref_image_path, canvas, display_folder), bg="red")
+            # delete_button.grid(row=row, column=col, sticky="NE", padx=5, pady=5)
             
         # Load and display matched images
         col = 1
         for matched_image_path in value["matched_images"]:
             mtd_image_path = os.path.join(display_folder, matched_image_path)
-            if(verifier_image(mtd_image_path)):
+            if(verifier_image(mtd_image_path) and mtd_image_path != ref_image_path):
                 matched_img = Image.open(mtd_image_path)
-                matched_img = matched_img.resize((80, 80), Image.ANTIALIAS)
+                matched_img = matched_img.resize((100, 100), Image.ANTIALIAS)
                 matched_img = ImageTk.PhotoImage(matched_img)
                 
                 matched_label = tk.Label(scrollable_frame, image=matched_img)
                 matched_label.image = matched_img  # Keep a reference to avoid garbage collection
                 matched_label.grid(row=row, column=col, padx=5, pady=5)
+                 # Ajouter le bouton croix pour supprimer la photo dans le coin haut droit
+                delete_button = tk.Button(scrollable_frame, text="X", command=lambda file=file: delete_photo(matched_image_path, display_folder), bg="red")
+                delete_button.grid(row=row, column=col, sticky="NE", padx=5, pady=5)
             
-            col += 1
+                col += 1
         row += 1
 
 
